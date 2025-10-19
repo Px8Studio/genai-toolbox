@@ -210,9 +210,22 @@ func getURL(baseURL, path string, pathParams, queryParams tools.Parameters, defa
 	// Set dynamic query parameters
 	query := parsedURL.Query()
 	for _, p := range queryParams {
-		v := paramsMap[p.GetName()]
+		v, ok := paramsMap[p.GetName()]
+		if !ok {
+			if p.GetRequired() {
+				return "", fmt.Errorf("required query parameter %q is missing", p.GetName())
+			}
+			continue
+		}
+		// Skip optional parameters with nil values
 		if v == nil {
-			v = ""
+			if p.GetRequired() {
+				// For required parameters with nil values, use empty string
+				v = ""
+			} else {
+				// For optional parameters with nil values, skip them
+				continue
+			}
 		}
 		query.Add(p.GetName(), fmt.Sprintf("%v", v))
 	}
